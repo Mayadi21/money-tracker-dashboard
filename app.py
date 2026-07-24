@@ -3,6 +3,7 @@ Money Tracker Dashboard - Modern Personal Finance Application
 Reorganized layout hierarchy: Date Presets -> KPIs (Income, Expense, Net Cash Flow) -> Hero Trend Chart -> Dual Donuts -> Transactions
 """
 import streamlit as st
+import streamlit.components.v1 as components
 
 # 1. Page Configuration (Must be first Streamlit command)
 st.set_page_config(
@@ -12,11 +13,42 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+# 2. URL Gambar Ikon Pengganti (Harus berupa gambar PNG/JPG dari internet)
+# Contoh di bawah menggunakan ikon uang generik dari internet. Ganti dengan URL gambar Anda sendiri.
+CUSTOM_ICON_URL = "https://cdn-icons-png.flaticon.com/512/3135/3135673.png"
+
+# 3. Injeksi JavaScript untuk mengubah ikon di sistem HP
+components.html(
+    f"""
+    <script>
+        const doc = window.parent.document;
+        
+        // Ubah ikon untuk perangkat Apple/iOS
+        let appleIcon = doc.querySelector("link[rel='apple-touch-icon']");
+        if (!appleIcon) {{
+            appleIcon = doc.createElement('link');
+            appleIcon.rel = 'apple-touch-icon';
+            doc.head.appendChild(appleIcon);
+        }}
+        appleIcon.href = '{CUSTOM_ICON_URL}';
+
+        // Ubah ikon standar
+        let standardIcon = doc.querySelector("link[rel='icon']");
+        if (standardIcon) {{
+            standardIcon.href = '{CUSTOM_ICON_URL}';
+        }}
+    </script>
+    """,
+    height=0,
+    width=0,
+)
+
 # Imports after page_config
 import pandas as pd
 from utils.helpers import load_css, render_empty_state
 from utils.data_loader import load_data
 from utils.filters import filter_dataframe
+from utils.refresh import init_refresh_state, render_refresh_notification
 from components.header import render_header
 from components.date_filter import render_date_filter
 from components.metric_cards import render_primary_kpi_cards
@@ -29,6 +61,10 @@ def main():
     # 2. Inject CSS & Theme Tokens
     load_css("assets/styles.css")
 
+    # Initialize refresh state & display toast notification if refreshed
+    init_refresh_state()
+    render_refresh_notification()
+
     # ---------------------------------------------------
     # 1. HEADER
     # ---------------------------------------------------
@@ -36,6 +72,7 @@ def main():
         title="💸 Dashboard Keuangan",
         subtitle="Aplikasi Keuangan Pribadi - Evaluasi Pemasukan, Pengeluaran & Arus Kas"
     )
+
 
     # Load Cached Data
     with st.spinner("🔄 Memuat data transaksi..."):

@@ -234,6 +234,61 @@ html, body, [class*="css"], .stApp {
     margin-bottom: 1.5rem;
 }
 
+/* Refresh Action Card & Timestamp Badge */
+.fin-refresh-card {
+    background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+    color: #FFFFFF;
+    padding: 0.85rem 1.15rem;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15);
+    margin-bottom: 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.fin-refresh-label {
+    color: #94A3B8;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.fin-refresh-timestamp {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.25rem;
+}
+
+.fin-refresh-timestamp .date {
+    color: #F8FAFC;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.fin-refresh-timestamp .time {
+    color: #38BDF8;
+    font-size: 0.85rem;
+    font-weight: 700;
+    font-family: monospace;
+}
+
+.fin-header-badge {
+    background: rgba(255, 255, 255, 0.15);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+/* Button Customization */
+.stButton > button {
+    border-radius: 12px !important;
+    font-weight: 700 !important;
+    transition: all 0.2s ease-in-out !important;
+}
+
 /* Hide default streamlit elements */
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
+
