@@ -10,15 +10,17 @@ from utils.constants import DAYS_INDONESIAN, TYPE_INCOME, TYPE_EXPENSE
 
 def get_csv_url() -> str:
     """
-    Safely retrieve Google Sheet CSV export URL from Streamlit secrets or environment variables.
+    Safely retrieve Google Sheet CSV export URL exclusively from Streamlit secrets or environment variables.
+    Returns None if no secret or environment variable is configured.
     """
     # 1. Check Streamlit secrets
     try:
         if "google_sheets" in st.secrets:
-            if "csv_url" in st.secrets["google_sheets"]:
-                return st.secrets["google_sheets"]["csv_url"]
-            elif "sheet_id" in st.secrets["google_sheets"]:
-                sid = st.secrets["google_sheets"]["sheet_id"]
+            url = st.secrets["google_sheets"].get("csv_url", "")
+            sid = st.secrets["google_sheets"].get("sheet_id", "")
+            if url and "YOUR_GOOGLE_SHEET" not in url and "PLACEHOLDER" not in url:
+                return url
+            elif sid and "YOUR_GOOGLE_SHEET" not in sid and "PLACEHOLDER" not in sid:
                 return f"https://docs.google.com/spreadsheets/d/{sid}/export?format=csv"
         elif "CSV_URL" in st.secrets:
             return st.secrets["CSV_URL"]
@@ -36,8 +38,7 @@ def get_csv_url() -> str:
     if env_id:
         return f"https://docs.google.com/spreadsheets/d/{env_id}/export?format=csv"
 
-    # 3. Fallback placeholder
-    return "https://docs.google.com/spreadsheets/d/PLACEHOLDER_SHEET_ID/export?format=csv"
+    return None
 
 @st.cache_data(ttl=300)
 def load_data(csv_url: str = None) -> pd.DataFrame:
@@ -47,14 +48,16 @@ def load_data(csv_url: str = None) -> pd.DataFrame:
     if csv_url is None:
         csv_url = get_csv_url()
         
+    if not csv_url:
+        return generate_sample_data()
+
     try:
         df = pd.read_csv(csv_url)
         df = preprocess_data(df)
         if df.empty:
             df = generate_sample_data()
         return df
-    except Exception as e:
-        st.warning(f"⚠️ Unable to load Google Sheet ({e}). Using generated sample dataset for demonstration.")
+    except Exception:
         return generate_sample_data()
 
 def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
@@ -101,7 +104,6 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
     df["Jenis"] = df["Jenis"].astype(str).str.strip()
     df["Kategori"] = df["Kategori"].astype(str).str.strip()
     
-    # Extract Catatan directly from CSV without hardcoding defaults
     if "Catatan" in df.columns:
         df["Catatan"] = df["Catatan"].fillna("").astype(str).str.strip()
     else:
