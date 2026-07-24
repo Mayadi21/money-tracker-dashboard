@@ -9,7 +9,7 @@ st.set_page_config(
     page_title="Money Tracker - Finance Dashboard",
     page_icon="💸",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 # Imports after page_config

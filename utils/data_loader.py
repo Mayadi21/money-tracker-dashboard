@@ -11,7 +11,6 @@ from utils.constants import DAYS_INDONESIAN, TYPE_INCOME, TYPE_EXPENSE
 def get_csv_url() -> str:
     """
     Safely retrieve Google Sheet CSV export URL from Streamlit secrets or environment variables.
-    Prevents hardcoding sensitive spreadsheet IDs in public Git repositories.
     """
     # 1. Check Streamlit secrets
     try:
@@ -43,7 +42,7 @@ def get_csv_url() -> str:
 @st.cache_data(ttl=300)
 def load_data(csv_url: str = None) -> pd.DataFrame:
     """
-    Load transaction dataset from Google Sheet CSV URL or generate realistic sample data as fallback.
+    Load transaction dataset from Google Sheet CSV URL or generate sample data as fallback.
     """
     if csv_url is None:
         csv_url = get_csv_url()
@@ -59,7 +58,31 @@ def load_data(csv_url: str = None) -> pd.DataFrame:
         return generate_sample_data()
 
 def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
-    """Preprocess, validate, and extract date features from raw DataFrame."""
+    """Preprocess, validate, and extract date features directly from raw CSV."""
+    if df.empty:
+        return df
+        
+    # Clean column headers (strip whitespace and extra quotes)
+    df.columns = df.columns.astype(str).str.strip().str.replace("'", "").str.replace('"', '')
+    
+    # Map flexible/alternative column names directly to standard columns
+    col_map = {}
+    for col in df.columns:
+        c_lower = col.lower().strip()
+        if c_lower in ["catatan", "keterangan", "note", "notes", "description"]:
+            col_map[col] = "Catatan"
+        elif c_lower in ["tanggal", "date", "time", "waktu"]:
+            col_map[col] = "Tanggal"
+        elif c_lower in ["jenis", "type", "tipe"]:
+            col_map[col] = "Jenis"
+        elif c_lower in ["kategori", "category"]:
+            col_map[col] = "Kategori"
+        elif c_lower in ["jumlah", "amount", "nominal"]:
+            col_map[col] = "Jumlah"
+            
+    if col_map:
+        df = df.rename(columns=col_map)
+
     required_cols = ["Tanggal", "Jenis", "Kategori", "Jumlah"]
     for col in required_cols:
         if col not in df.columns:
@@ -77,7 +100,12 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
     
     df["Jenis"] = df["Jenis"].astype(str).str.strip()
     df["Kategori"] = df["Kategori"].astype(str).str.strip()
-    df["Catatan"] = df.get("Catatan", "").fillna("").astype(str)
+    
+    # Extract Catatan directly from CSV without hardcoding defaults
+    if "Catatan" in df.columns:
+        df["Catatan"] = df["Catatan"].fillna("").astype(str).str.strip()
+    else:
+        df["Catatan"] = ""
     
     df = df.sort_values("Tanggal", ascending=True).reset_index(drop=True)
     
@@ -91,13 +119,22 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 def generate_sample_data(num_records: int = 120) -> pd.DataFrame:
-    """Generate realistic 6-month sample transactions for demo/testing."""
+    """Generate sample transactions for offline demo fallback."""
     np.random.seed(42)
     end_date = datetime.now()
     start_date = end_date - timedelta(days=180)
     
     categories_expense = ["Makanan & Minuman", "Transportasi", "Belanja", "Hiburan", "Tagihan", "Kesehatan", "Lainnya"]
-    categories_income = ["Gaji", "Freelance Project", "Investasi", "Lainnya"]
+    
+    sample_notes = {
+        "Makanan & Minuman": ["Beli gorengan & kopi", "Makan siang bakso", "Beli nasi padang", "Jajan popmie"],
+        "Transportasi": ["Naik gojek ke kampus", "Ongkos angkot", "Isi bensin motor", "Naik grab PP"],
+        "Belanja": ["Belanja bulanan supermarket", "Beli baju kaos", "Beli perlengkapan mandi"],
+        "Hiburan": ["Tiket bioskop XXI", "Langganan Spotify", "Top up game"],
+        "Tagihan": ["Bayar listrik PLN", "Bayar kuota internet", "Bayar air PDAM"],
+        "Kesehatan": ["Beli obat flu di apotek", "Beli vitamin C"],
+        "Lainnya": ["Kas RT", "Beli barang fotokopi"]
+    }
     
     records = []
     current_date = start_date
@@ -109,7 +146,7 @@ def generate_sample_data(num_records: int = 120) -> pd.DataFrame:
                 "Jenis": TYPE_INCOME,
                 "Kategori": "Gaji",
                 "Jumlah": 12000000,
-                "Catatan": "Gaji Bulanan",
+                "Catatan": "Transfer Gaji Bulanan Kantor",
                 "Pesan Balasan": "Pemasukan tercatat"
             })
             
@@ -118,8 +155,8 @@ def generate_sample_data(num_records: int = 120) -> pd.DataFrame:
                 "Tanggal": current_date.replace(hour=14, minute=30, second=0),
                 "Jenis": TYPE_INCOME,
                 "Kategori": "Freelance Project",
-                "Jumlah": np.random.choice([1500000, 2500000, 4000000]),
-                "Catatan": "Pembayaran Project Web",
+                "Jumlah": float(np.random.choice([1500000, 2500000, 4000000])),
+                "Catatan": "Pembayaran Project Web Design Client",
                 "Pesan Balasan": "Pemasukan tercatat"
             })
             
@@ -139,12 +176,13 @@ def generate_sample_data(num_records: int = 120) -> pd.DataFrame:
                 
             hr = np.random.randint(8, 21)
             mn = np.random.randint(0, 59)
+            note = np.random.choice(sample_notes[cat])
             records.append({
                 "Tanggal": current_date.replace(hour=hr, minute=mn, second=0),
                 "Jenis": TYPE_EXPENSE,
                 "Kategori": cat,
                 "Jumlah": float(amt),
-                "Catatan": f"Transaksi {cat}",
+                "Catatan": note,
                 "Pesan Balasan": "Catatan pengeluaran tersimpan"
             })
             
